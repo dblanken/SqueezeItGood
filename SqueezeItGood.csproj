@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <OutputPath>bin/</OutputPath>
+    <AssemblyName>SqueezeItGood</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    Update these paths to match your Vintage Story installation.
+    Common locations:
+    - Windows: C:\Program Files\Vintagestory
+    - Linux: ~/.local/share/vintagestory or /opt/vintagestory
+    - Steam: ~/.steam/steam/steamapps/common/Vintage Story
+  -->
+  <PropertyGroup>
+    <!-- Check VINTAGE_STORY environment variable first -->
+    <VSPath Condition="'$(VSPath)' == '' And '$(VINTAGE_STORY)' != ''">$(VINTAGE_STORY)</VSPath>
+    <!-- Flatpak installation -->
+    <VSPath Condition="'$(VSPath)' == '' And Exists('$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/current/active/files/extra/vintagestory')">$(HOME)/.local/share/flatpak/app/at.vintagestory.VintageStory/current/active/files/extra/vintagestory</VSPath>
+    <!-- Standard locations -->
+    <VSPath Condition="'$(VSPath)' == '' And Exists('$(HOME)/.local/share/vintagestory')">$(HOME)/.local/share/vintagestory</VSPath>
+    <VSPath Condition="'$(VSPath)' == '' And Exists('/opt/vintagestory')">/opt/vintagestory</VSPath>
+    <VSPath Condition="'$(VSPath)' == '' And Exists('$(HOME)/.steam/steam/steamapps/common/Vintage Story')">$(HOME)/.steam/steam/steamapps/common/Vintage Story</VSPath>
+    <VSPath Condition="'$(VSPath)' == ''">C:\Program Files\Vintagestory</VSPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="VintagestoryAPI">
+      <HintPath>$(VSPath)/VintagestoryAPI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VintagestoryLib">
+      <HintPath>$(VSPath)/VintagestoryLib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="VSSurvivalMod">
+      <HintPath>$(VSPath)/Mods/VSSurvivalMod.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(VSPath)/Lib/0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="modinfo.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>
