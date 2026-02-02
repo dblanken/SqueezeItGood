@@ -1,72 +1,49 @@
 #!/bin/bash
 
 # Build script for SqueezeItGood mod
-# Builds the mod and optionally packages it for distribution
+# Requires VINTAGE_STORY environment variable to be set
 
 set -e
 
 # Colors for output
-RED='\033[0;31m'
 GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+RED='\033[0;31m'
+NC='\033[0m'
+
+if [ -z "$VINTAGE_STORY" ]; then
+    echo -e "${RED}Error: VINTAGE_STORY environment variable not set${NC}"
+    echo "Please set it to your Vintage Story installation path, e.g.:"
+    echo "  export VINTAGE_STORY=~/.local/share/vintagestory"
+    exit 1
+fi
 
 echo -e "${GREEN}Building SqueezeItGood mod...${NC}"
 
-# Try to find Vintage Story installation
-VS_PATHS=(
-    "$HOME/.local/share/vintagestory"
-    "/opt/vintagestory"
-    "$HOME/.steam/steam/steamapps/common/Vintage Story"
-    "C:/Program Files/Vintagestory"
-)
-
-VS_PATH=""
-for path in "${VS_PATHS[@]}"; do
-    if [ -d "$path" ]; then
-        VS_PATH="$path"
-        break
-    fi
-done
-
-if [ -z "$VS_PATH" ]; then
-    echo -e "${YELLOW}Warning: Could not auto-detect Vintage Story installation.${NC}"
-    echo "Please set VSPath manually in the .csproj or pass it as an argument:"
-    echo "  dotnet build -p:VSPath=/path/to/vintagestory"
-else
-    echo -e "Found Vintage Story at: ${GREEN}$VS_PATH${NC}"
-fi
-
-# Build the mod
-if [ -n "$VS_PATH" ]; then
-    dotnet build -c Release -p:VSPath="$VS_PATH"
-else
-    dotnet build -c Release
-fi
+dotnet build -c Release
 
 if [ $? -eq 0 ]; then
     echo -e "${GREEN}Build successful!${NC}"
 
+    # Extract version from modinfo.json
+    VERSION=$(grep -o '"version":\s*"[^"]*"' modinfo.json | grep -o '[0-9][^"]*')
+    MOD_NAME="SqueezeItGood"
+    ZIP_NAME="${MOD_NAME}-v${VERSION}.zip"
+
     # Create release package
-    RELEASE_DIR="release"
-    mkdir -p "$RELEASE_DIR"
+    RELEASE_DIR="Releases"
+    STAGING_DIR="$RELEASE_DIR/$MOD_NAME"
+    mkdir -p "$STAGING_DIR"
 
     # Copy mod files
-    cp bin/SqueezeItGood.dll "$RELEASE_DIR/"
-    cp modinfo.json "$RELEASE_DIR/"
+    cp bin/SqueezeItGood.dll "$STAGING_DIR/"
+    cp modinfo.json "$STAGING_DIR/"
 
-    # Create zip package
-    cd "$RELEASE_DIR"
-    zip -r ../SqueezeItGood.zip ./*
-    cd ..
+    # Create zip package (files at root, not in subfolder)
+    cd "$STAGING_DIR"
+    zip -r "../$ZIP_NAME" ./*
+    cd ../..
 
-    echo -e "${GREEN}Release package created: SqueezeItGood.zip${NC}"
-    echo ""
-    echo "To install:"
-    echo "  1. Extract SqueezeItGood.zip to your Vintage Story Mods folder"
-    echo "     Linux: ~/.config/VintagestoryData/Mods/"
-    echo "     Windows: %appdata%/VintagestoryData/Mods/"
-    echo "  2. Or copy the 'release' folder directly to your Mods folder"
+    echo -e "${GREEN}Release package created: $RELEASE_DIR/$ZIP_NAME${NC}"
 else
     echo -e "${RED}Build failed!${NC}"
     exit 1
