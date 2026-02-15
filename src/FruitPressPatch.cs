@@ -75,22 +75,9 @@ namespace SqueezeItGood
                 double juiceLeftBefore = __state;
                 double juiceLeftNow = Convert.ToDouble(juiceableLitresLeftProp.GetValue(__instance) ?? 0);
 
-                // If juice changed, normal extraction happened - do nothing
-                if (Math.Abs(juiceLeftNow - juiceLeftBefore) > 0.001)
-                {
-                    return;
-                }
-
-                // Only intervene when animation is at the bottom and there's mash
                 bool animFinished = __instance.CompressAnimFinished;
                 bool hasMash = __instance.MashSlot != null && !__instance.MashSlot.Empty;
 
-                if (!animFinished || !hasMash)
-                {
-                    return;
-                }
-
-                // Get squeeze values
                 double pressSqueezeRel = 0;
                 if (pressSqueezeRelField != null)
                 {
@@ -98,24 +85,15 @@ namespace SqueezeItGood
                 }
 
                 double squeezeRel = 0;
-                var mashStack = __instance.MashSlot.Itemstack;
+                var mashStack = hasMash ? __instance.MashSlot.Itemstack : null;
                 if (mashStack?.Attributes != null)
                 {
                     squeezeRel = mashStack.Attributes.GetDouble("squeezeRel", 0);
                 }
 
-                // Normal juicing requires: squeezeRel < 1 && pressSqueezeRel <= squeezeRel
-                // If those conditions failed, we need to fix the values
-                bool normalJuicingWouldFail = squeezeRel >= 1 || pressSqueezeRel > squeezeRel;
-
-                if (!normalJuicingWouldFail)
-                {
-                    return;
-                }
-
                 // If juiceLeft is 0, calculate it from the mash
                 double actualJuice = juiceLeftNow;
-                if (actualJuice <= 0 && getJuiceablePropsMethod != null)
+                if (actualJuice <= 0 && hasMash && getJuiceablePropsMethod != null)
                 {
                     var props = getJuiceablePropsMethod.Invoke(__instance, new object[] { mashStack });
                     if (props != null)
@@ -131,27 +109,26 @@ namespace SqueezeItGood
                     }
                 }
 
-                if (actualJuice <= 0)
+                var result = SqueezeDecision.Evaluate(
+                    juiceLeftBefore, juiceLeftNow,
+                    animFinished, hasMash,
+                    squeezeRel, pressSqueezeRel,
+                    actualJuice);
+
+                if (result.Action == SqueezeFixAction.FixValues)
                 {
-                    return;
+                    if (mashStack?.Attributes != null && squeezeRel >= 1)
+                    {
+                        mashStack.Attributes.SetDouble("squeezeRel", result.FixedValue);
+                    }
+
+                    if (pressSqueezeRelField != null && pressSqueezeRel > result.FixedValue)
+                    {
+                        pressSqueezeRelField.SetValue(__instance, result.FixedValue);
+                    }
+
+                    __instance.MarkDirty(true);
                 }
-
-                // Fix the values so vanilla code can extract on next tick
-                // Vanilla requires: squeezeRel < 1 AND pressSqueezeRel <= squeezeRel
-                // Set both to 0.99 to satisfy both conditions
-                double fixedValue = 0.99;
-
-                if (mashStack?.Attributes != null && squeezeRel >= 1)
-                {
-                    mashStack.Attributes.SetDouble("squeezeRel", fixedValue);
-                }
-
-                if (pressSqueezeRelField != null && pressSqueezeRel > fixedValue)
-                {
-                    pressSqueezeRelField.SetValue(__instance, fixedValue);
-                }
-
-                __instance.MarkDirty(true);
             }
             catch
             {

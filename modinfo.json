@@ -1,5 +1,6 @@
 {
     "type": "code",
+    "side": "Universal",
     "modid": "squeezeitgood",
     "name": "Squeeze It Good",
     "authors": ["Neimoon"],
