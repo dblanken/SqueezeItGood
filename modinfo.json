@@ -7,6 +7,6 @@
     "description": "Allows squeezing any amount of fruit or honey in the fruit press, even small quantities that normally wouldn't be enough.",
     "version": "1.0.0",
     "dependencies": {
-        "game": "1.21.6"
+        "game": "1.22.0"
     }
 }
